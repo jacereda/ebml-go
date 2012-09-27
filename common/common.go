@@ -15,8 +15,8 @@ var (
 	nf = flag.Int("n", 0x7fffffff, "Number of frames")
 )
 
-const chancap = 2
-const achancap = 8
+const chancap = 4
+const achancap = 32
 
 func vdecode(dec *ffvp8.Decoder, 
 	vdchan <-chan webm.Packet, vwchan chan<- *ffvp8.Frame) {
@@ -72,7 +72,6 @@ func read(vtrack *webm.TrackEntry, atrack *webm.TrackEntry,
 
 func Main(vpresent func(ch <-chan *ffvp8.Frame), 
 	apresent func(ch <-chan *ffvorbis.Samples)) {
-	flag.Parse()
 
 	var err error
 	var wm webm.WebM
