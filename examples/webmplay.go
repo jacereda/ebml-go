@@ -25,6 +25,8 @@ var (
 	notc       = flag.Bool("t", false, "Ignore timecodes")
 	blend      = flag.Bool("b", false, "Blend between images")
 	fullscreen = flag.Bool("f", false, "Fullscreen mode")
+	justaudio = flag.Bool("a", false, "Just audio")
+	justvideo = flag.Bool("v", false, "Just video")
 )
 
 var ntex int
@@ -50,14 +52,14 @@ vec3 ycbcr2rgb(vec3 c) {
 `
 
 const fss = ycbcr2rgb + `
-uniform sampler2D yt0;
-uniform sampler2D cbt0;
-uniform sampler2D crt0;
+uniform sampler2D yt1;
+uniform sampler2D cbt1;
+uniform sampler2D crt1;
 
 void main() {
-   vec3 c = vec3(texture2D(yt0, gl_TexCoord[0].st).r,
-                 texture2D(cbt0, gl_TexCoord[0].st).r,
-                 texture2D(crt0, gl_TexCoord[0].st).r);
+   vec3 c = vec3(texture2D(yt1, gl_TexCoord[0].st).r,
+                 texture2D(cbt1, gl_TexCoord[0].st).r,
+                 texture2D(crt1, gl_TexCoord[0].st).r);
    gl_FragColor = vec4(ycbcr2rgb(c), 1.0);
 }
 `
@@ -109,7 +111,7 @@ func shinit() gl.Int {
 		l = 3
 	}
 	gl.UseProgram(prg)
-	names := []string{"yt0", "cbt0", "crt0", "yt1", "cbt1", "crt1"}
+	names := []string{"yt1", "cbt1", "crt1", "yt0", "cbt0", "crt0"}
 	for i := 0; i < l; i++ {
 		loc := gl.GetUniformLocation(prg, gl.GLString(names[i]))
 		gl.Uniform1i(loc, gl.Int(i))
@@ -231,11 +233,11 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 				tbase.Add(pimg.Timecode),
 				tbase.Add(img.Timecode)))
 			gl.ActiveTexture(gl.TEXTURE3)
-			upload(1, pimg.Y, pimg.YStride, w, h)
+			upload(4, pimg.Y, pimg.YStride, w, h)
 			gl.ActiveTexture(gl.TEXTURE4)
-			upload(2, pimg.Cb, pimg.CStride, w/2, h/2)
+			upload(5, pimg.Cb, pimg.CStride, w/2, h/2)
 			gl.ActiveTexture(gl.TEXTURE5)
-			upload(3, pimg.Cr, pimg.CStride, w/2, h/2)
+			upload(6, pimg.Cr, pimg.CStride, w/2, h/2)
 		}
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
@@ -304,7 +306,16 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 }
 
 func main() {
+	flag.Parse()
 	dev = C.alcOpenDevice(nil)
 	defer C.alcCloseDevice(dev)
-	common.Main(vpresent, apresent)
+	vp := vpresent
+	ap := apresent
+	if *justaudio {
+		vp = nil
+	}
+	if *justvideo {
+		ap = nil
+	}
+	common.Main(vp, ap)
 }
